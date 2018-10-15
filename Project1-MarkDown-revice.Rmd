@@ -1,0 +1,120 @@
+---
+title: "Project 1"
+author: "Ziyan Cheng"
+date: "10/4/2018"
+output: html_document
+---
+
+## Reproducible Research Project 1 Analyzing Fitbit Data
+
+This is the first project of Reproducible Research. The goal of this project is as follows
+
+1. loading and preparing the data
+2. imputing the missing data
+3. translating the data to answer research questions
+
+
+## Loading and preparing the data
+
+The first step is to load the data file "activity.csv" and ready to process it.
+```
+library(dplyr)
+library(ggplot2)
+setwd("/Users/chengya@us.ibm.com/coursera/reproducibleResearch/week2")
+columns <- c("integer", "character", "integer")
+df <- read.csv("activity.csv", header = TRUE, colClasses = columnss, na.strings = "NA")
+summary(df)
+
+```
+
+## What is mean the number of steps taken per day?
+
+```
+total_steps <- aggregate(df$steps ~ df$date, df, sum)
+hist(total_steps$steps,col = "green",xlab = "The daily total of steps",ylab = "The number of the days", main = paste"The distribuition of daily total steps")
+```
+
+## Question 3: Mean and median number of steps taken each day showing as abline 
+
+```
+abline(v = mean(total_steps$steps), lty=1, lwd =2, col="red")
+abline(v = median(total_steps$steps), lty =2, lwd = 2, col="black")
+legend( x= "topright", c("Mean", "Median"), col =c("red", "black"), lty = c(1,2), lwd =c(2,2))
+
+meanSteps <- mean(total_steps$steps)
+medianSteps <- median(total_steps$steps)
+```
+
+## Question 4: Time series plot of the average number of steps taken
+
+```
+avgStepsByInterval <- aggregate(steps ~ interval, df, mean)
+plot(avgStepsByInterval$interval, 
+     avgStepsByInterval$steps,
+     type = "l",
+     xlab = "Interval",
+     ylab = "Number of Steps",
+     main = "Average Steps taken daily by interval")
+```
+## Question 5: The 5-minute interval that, on average, contains the maximum number of steps
+
+```
+maxSteps <- avgStepsByInterval[which.max(avgStepsByInterval$steps),1]
+
+```
+Note: the maximum steps: 835
+## Question 6: Code to describe and show a strategy for imputing missing data
+  
+  
+  Check the total of missing data
+```  
+  MissedDF <- sum(!complete.cases(df))
+```
+  Note: 2304 is missed and filled with NA
+  Now we are using the mean to fill in the missing data, create a new dataset is equal to the original data but using the mean to fill in the   missing data as the following:
+```  
+imputed_df <- transform(df, steps = ifelse(is.na(df$steps), avgStepsByInterval$steps[match(df$interval, avgStepsByInterval$interval)], df$steps))
+
+summary(imputed_df)
+```
+ Note: Zeros are imputed for 10-1-2012, since it is the min value of the dates and would have 9,000 steps higher than the following day
+```
+imputed_df[as.character(imputed_df$date) == "2012-10-01", 1 ] <- 0
+```
+ Recount the total steps per day and create histogram
+```
+total_steps_imputed <- aggregate(steps ~ date, imputed_df, sum)
+names(total_steps_imputed) <- c("date", "daily_steps")
+```
+
+## Question 7: Histogram of the total number of steps taken each day after missing values are imputed
+
+```
+hist(total_steps_imputed$daily_steps, col="purple", xlab = " Class of Total of Steps per day", ylab = "Number of days", main = "Daily Steps taken after the missing data are imputed")
+
+```
+
+## Question 8: Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+
+ step1. create a new vector as dateType and alter the data from
+ 
+```
+library(dplyr)
+df$date <- as.Date(df$date)
+
+df2 <- df %>% mutate(dateType =ifelse(weekdays(df$date)=="Saturday" | weekdays(df$date)=="Sunday", "Weekends","Weekday" ))
+```
+
+
+ step2. make the panel plot to compare 
+ 
+```
+plot<- ggplot(avgStepbyDate, aes(x = interval , y = steps, color = dateType)) +
+  geom_line() +
+  labs(title = "Average daily steps by type of date", x = "Interval", y = "Average number of steps") +
+  facet_wrap(~dateType, ncol = 1, nrow=2)
+print(plot)
+
+```
+
+ Conclusion: There is difference activity pattern between weekdays vs. weekends, which tell us that weekends people doing more walking or excerises than weekdays.
